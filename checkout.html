@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>LENS — Checkout</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #0e0d0b;
+    --surface: #161410;
+    --card: #1c1a16;
+    --border: #2a2620;
+    --gold: #c8a96e;
+    --gold-light: #e2c98a;
+    --text: #e8e2d8;
+    --muted: #7a7060;
+    --accent: #ff5c35;
+    --success: #4caf7d;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 300;
+    min-height: 100vh;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 100;
+    opacity: 0.4;
+  }
+
+  /* NAV */
+  nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.5rem 3rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .logo {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.8rem;
+    font-weight: 300;
+    letter-spacing: 0.4em;
+    color: var(--gold);
+    text-decoration: none;
+  }
+
+  .back-link {
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 0.75rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: color 0.2s;
+  }
+
+  .back-link:hover { color: var(--text); }
+
+  /* PROGRESS */
+  .progress {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    padding: 2rem 3rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .step {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-size: 0.72rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .step.active { color: var(--gold); }
+  .step.done { color: var(--success); }
+
+  .step-num {
+    width: 24px;
+    height: 24px;
+    border: 1px solid currentColor;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.65rem;
+    flex-shrink: 0;
+  }
+
+  .step-line {
+    width: 60px;
+    height: 1px;
+    background: var(--border);
+    margin: 0 0.75rem;
+  }
+
+  /* LAYOUT */
+  .checkout-layout {
+    display: grid;
+    grid-template-columns: 1fr 380px;
+    gap: 0;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 3rem;
+    min-height: calc(100vh - 160px);
+  }
+
+  /* FORM SIDE */
+  .form-side {
+    padding-right: 3rem;
+    border-right: 1px solid var(--border);
+  }
+
+  .section-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.6rem;
+    font-weight: 300;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .form-group {
+    margin-bottom: 1.25rem;
+  }
+
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+
+  label {
+    display: block;
+    font-size: 0.7rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 0.4rem;
+  }
+
+  input, select {
+    width: 100%;
+    background: var(--card);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 0.75rem 1rem;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 300;
+    outline: none;
+    transition: border-color 0.2s;
+    -webkit-appearance: none;
+  }
+
+  input:focus, select:focus {
+    border-color: var(--gold);
+  }
+
+  input::placeholder {
+    color: var(--muted);
+    font-size: 0.85rem;
+  }
+
+  select option {
+    background: var(--card);
+  }
+
+  /* Card number field */
+  .card-input-wrap {
+    position: relative;
+  }
+
+  .card-icons {
+    position: absolute;
+    right: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    gap: 0.3rem;
+  }
+
+  .cc-icon {
+    width: 32px;
+    height: 20px;
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    background: var(--surface);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.5rem;
+    color: var(--muted);
+    letter-spacing: 0.05em;
+    font-weight: 500;
+  }
+
+  .cc-icon.visa { color: #1a6ebf; border-color: #1a6ebf33; }
+  .cc-icon.mc { color: #eb001b; border-color: #eb001b33; }
+
+  /* Section spacing */
+  .form-section {
+    margin-bottom: 2.5rem;
+  }
+
+  /* Secure badge */
+  .secure-note {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--muted);
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    margin-top: 1.5rem;
+  }
+
+  /* ORDER SUMMARY */
+  .summary-side {
+    padding-left: 2.5rem;
+  }
+
+  .order-items {
+    margin-bottom: 1.5rem;
+  }
+
+  .order-item {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+    padding: 1rem 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .order-item:last-child { border-bottom: none; }
+
+  .item-thumb {
+    width: 56px;
+    height: 56px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .item-thumb svg { width: 28px; opacity: 0.3; }
+
+  .item-info { flex: 1; }
+
+  .item-brand {
+    font-size: 0.62rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 0.2rem;
+  }
+
+  .item-name {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.05rem;
+    font-weight: 400;
+    line-height: 1.2;
+  }
+
+  .item-variant {
+    font-size: 0.7rem;
+    color: var(--muted);
+    margin-top: 0.15rem;
+  }
+
+  .item-price {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.2rem;
+    font-weight: 300;
+    flex-shrink: 0;
+  }
+
+  /* Totals */
+  .totals {
+    border-top: 1px solid var(--border);
+    padding-top: 1.25rem;
+  }
+
+  .total-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.82rem;
+    color: var(--muted);
+    margin-bottom: 0.6rem;
+  }
+
+  .total-row.final {
+    color: var(--text);
+    font-size: 0.9rem;
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--border);
+  }
+
+  .total-row.final span:last-child {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.5rem;
+    font-weight: 300;
+  }
+
+  /* Promo */
+  .promo-row {
+    display: flex;
+    gap: 0;
+    margin-bottom: 1.5rem;
+    margin-top: 1rem;
+  }
+
+  .promo-row input {
+    flex: 1;
+    border-right: none;
+  }
+
+  .promo-btn {
+    padding: 0 1rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s;
+  }
+
+  .promo-btn:hover { color: var(--gold); border-color: var(--gold); }
+
+  /* Submit */
+  .submit-btn {
+    width: 100%;
+    padding: 1rem;
+    background: var(--gold);
+    border: none;
+    color: #0e0d0b;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 500;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background 0.2s;
+    margin-top: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+  }
+
+  .submit-btn:hover { background: var(--gold-light); }
+
+  /* Success overlay */
+  .success-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(14,13,11,0.95);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 1.5rem;
+    text-align: center;
+  }
+
+  .success-overlay.show { display: flex; }
+
+  .success-icon {
+    width: 64px;
+    height: 64px;
+    border: 1px solid var(--success);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .success-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 2.5rem;
+    font-weight: 300;
+  }
+
+  .success-sub {
+    color: var(--muted);
+    font-size: 0.85rem;
+    letter-spacing: 0.05em;
+  }
+
+  .success-order {
+    font-size: 0.72rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--gold);
+  }
+
+  .home-btn {
+    display: inline-block;
+    margin-top: 1rem;
+    padding: 0.8rem 2rem;
+    border: 1px solid var(--gold);
+    color: var(--gold);
+    text-decoration: none;
+    font-size: 0.75rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    transition: all 0.2s;
+  }
+
+  .home-btn:hover { background: var(--gold); color: #0e0d0b; }
+
+  @media (max-width: 900px) {
+    .checkout-layout {
+      grid-template-columns: 1fr;
+      padding: 1.5rem;
+    }
+
+    .form-side {
+      padding-right: 0;
+      border-right: none;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 2.5rem;
+      margin-bottom: 2.5rem;
+    }
+
+    .summary-side { padding-left: 0; }
+    nav { padding: 1rem 1.25rem; }
+    .progress { padding: 1.25rem; }
+    .step-line { width: 30px; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <a class="logo" href="#">LENS</a>
+  <a class="back-link" href="cameras.html">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+    Back to Shop
+  </a>
+</nav>
+
+<div class="progress">
+  <div class="step done">
+    <div class="step-num">✓</div>
+    Cart
+  </div>
+  <div class="step-line"></div>
+  <div class="step active">
+    <div class="step-num">2</div>
+    Checkout
+  </div>
+  <div class="step-line"></div>
+  <div class="step">
+    <div class="step-num">3</div>
+    Confirm
+  </div>
+</div>
+
+<div class="checkout-layout">
+
+  <!-- FORM SIDE -->
+  <div class="form-side">
+
+    <div class="form-section">
+      <h2 class="section-title">Contact</h2>
+      <div class="form-group">
+        <label>Email Address</label>
+        <input type="email" placeholder="your@email.com"/>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <h2 class="section-title">Shipping Address</h2>
+      <div class="form-row form-group">
+        <div>
+          <label>First Name</label>
+          <input type="text" placeholder="John"/>
+        </div>
+        <div>
+          <label>Last Name</label>
+          <input type="text" placeholder="Doe"/>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Street Address</label>
+        <input type="text" placeholder="123 Main Street"/>
+      </div>
+      <div class="form-group">
+        <label>Apartment, Suite (optional)</label>
+        <input type="text" placeholder="Apt 4B"/>
+      </div>
+      <div class="form-row form-group">
+        <div>
+          <label>City</label>
+          <input type="text" placeholder="Cairo"/>
+        </div>
+        <div>
+          <label>Postal Code</label>
+          <input type="text" placeholder="11511"/>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Country</label>
+        <select>
+          <option>Egypt</option>
+          <option>United Arab Emirates</option>
+          <option>Saudi Arabia</option>
+          <option>United States</option>
+          <option>United Kingdom</option>
+          <option>Germany</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <h2 class="section-title">Payment</h2>
+
+      <div class="form-group">
+        <label>Card Number</label>
+        <div class="card-input-wrap">
+          <input type="text" placeholder="1234  5678  9012  3456" id="cardNum" maxlength="19"/>
+          <div class="card-icons">
+            <div class="cc-icon visa">VISA</div>
+            <div class="cc-icon mc">MC</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-row form-group">
+        <div>
+          <label>Expiry Date</label>
+          <input type="text" placeholder="MM / YY" id="expiry" maxlength="7"/>
+        </div>
+        <div>
+          <label>CVV</label>
+          <input type="text" placeholder="•••" maxlength="4"/>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Cardholder Name</label>
+        <input type="text" placeholder="John Doe"/>
+      </div>
+
+      <div class="secure-note">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>
+        </svg>
+        Secured by 256-bit SSL encryption
+      </div>
+    </div>
+
+  </div><!-- /form-side -->
+
+  <!-- SUMMARY SIDE -->
+  <div class="summary-side">
+    <h2 class="section-title">Order Summary</h2>
+
+    <div class="order-items">
+
+      <div class="order-item">
+        <div class="item-thumb">
+          <svg viewBox="0 0 80 60" fill="white" xmlns="http://www.w3.org/2000/svg">
+            <rect x="5" y="15" width="70" height="42" rx="4"/>
+            <rect x="28" y="8" width="24" height="10" rx="2"/>
+            <circle cx="40" cy="36" r="13" stroke="white" fill="none" stroke-width="2"/>
+            <circle cx="40" cy="36" r="7" stroke="white" fill="none" stroke-width="2"/>
+          </svg>
+        </div>
+        <div class="item-info">
+          <div class="item-brand">Sony</div>
+          <div class="item-name">Alpha A7R V</div>
+          <div class="item-variant">Body Only · Qty: 1</div>
+        </div>
+        <div class="item-price">$3,499</div>
+      </div>
+
+      <div class="order-item">
+        <div class="item-thumb">
+          <svg viewBox="0 0 80 60" fill="white" xmlns="http://www.w3.org/2000/svg">
+            <rect x="10" y="18" width="60" height="35" rx="2"/>
+            <path d="M20 18 L20 10 L52 10 L58 18"/>
+            <circle cx="40" cy="37" r="12" stroke="white" fill="none" stroke-width="2"/>
+            <circle cx="40" cy="37" r="6" stroke="white" fill="none" stroke-width="1.5"/>
+          </svg>
+        </div>
+        <div class="item-info">
+          <div class="item-brand">Sony</div>
+          <div class="item-name">FE 24-70mm f/2.8 GM II</div>
+          <div class="item-variant">Lens · Qty: 1</div>
+        </div>
+        <div class="item-price">$2,299</div>
+      </div>
+
+    </div>
+
+    <div class="promo-row">
+      <input type="text" placeholder="Promo code"/>
+      <button class="promo-btn">Apply</button>
+    </div>
+
+    <div class="totals">
+      <div class="total-row">
+        <span>Subtotal</span>
+        <span>$5,798.00</span>
+      </div>
+      <div class="total-row">
+        <span>Shipping</span>
+        <span>Free</span>
+      </div>
+      <div class="total-row">
+        <span>Tax (10%)</span>
+        <span>$579.80</span>
+      </div>
+      <div class="total-row final">
+        <span>Total</span>
+        <span>$6,377.80</span>
+      </div>
+    </div>
+
+    <button class="submit-btn" onclick="placeOrder()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>
+      </svg>
+      Place Order
+    </button>
+
+  </div><!-- /summary-side -->
+
+</div><!-- /checkout-layout -->
+
+<!-- SUCCESS OVERLAY -->
+<div class="success-overlay" id="successOverlay">
+  <div class="success-icon">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#4caf7d" stroke-width="2">
+      <polyline points="20 6 9 17 4 12"/>
+    </svg>
+  </div>
+  <div class="success-order">Order #LNS-2025-00847</div>
+  <div class="success-title">Order Confirmed</div>
+  <div class="success-sub">Thank you! Your gear is on its way.</div>
+  <div class="success-sub" style="font-size:0.75rem;">A confirmation email has been sent to your inbox.</div>
+  <a href="cameras.html" class="home-btn">Continue Shopping</a>
+</div>
+
+<script>
+  // Format card number
+  document.getElementById('cardNum').addEventListener('input', function(e) {
+    let val = e.target.value.replace(/\D/g, '').substring(0, 16);
+    e.target.value = val.replace(/(.{4})/g, '$1  ').trim();
+  });
+
+  // Format expiry
+  document.getElementById('expiry').addEventListener('input', function(e) {
+    let val = e.target.value.replace(/\D/g, '').substring(0, 4);
+    if (val.length >= 2) val = val.substring(0,2) + ' / ' + val.substring(2);
+    e.target.value = val;
+  });
+
+  function placeOrder() {
+    document.getElementById('successOverlay').classList.add('show');
+  }
+</script>
+
+</body>
+</html>
